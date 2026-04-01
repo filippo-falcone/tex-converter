@@ -2,7 +2,7 @@ import re
 import chardet
 from typing import List
 from ..model.document import Document, Block
-from ..model.blocks import Paragraph, Heading, ListBlock
+from ..model.blocks import Paragraph, Heading, Image, ListBlock
 
 
 def MarkdownParser(path: str) -> Document:
@@ -58,7 +58,7 @@ def MarkdownParser(path: str) -> Document:
 
         # Liste ordinate: 1. item
         if re.match(r"\d+\.\s", line):
-            item = re.sub(r"^\d+\.\s", "", line).strip()
+            item: str = re.sub(r"^\d+\.\s", "", line).strip()
             ListBuffer.append(item)
             ordered = True
             i += 1
@@ -66,6 +66,15 @@ def MarkdownParser(path: str) -> Document:
             if i == len(lines) or not re.match(r"\d+\.\s", lines[i].strip()):
                 blocks.append(ListBlock(items=ListBuffer, ordered=ordered))
                 ListBuffer = []
+            continue
+
+        # Immagini: ![alt text](path)
+        ImgMatch: re.Match[str] | None = re.match(r"!\[(.*?)\]\((.*?)\)", line)
+        if ImgMatch:
+            alt: str = ImgMatch.groups()[0]
+            PathImg: str = ImgMatch.groups()[1]
+            blocks.append(Image(path=PathImg, caption=alt))
+            i += 1
             continue
 
         # Paragrafo normale
