@@ -1,3 +1,4 @@
+import re
 import chardet
 from typing import List
 from ..model.document import Document, Block
@@ -51,6 +52,18 @@ def MarkdownParser(path: str) -> Document:
             i += 1
 
             if i == len(lines) or not lines[i].strip().startswith("- "):
+                blocks.append(ListBlock(items=ListBuffer, ordered=ordered))
+                ListBuffer = []
+            continue
+
+        # Liste ordinate: 1. item
+        if re.match(r"\d+\.\s", line):
+            item = re.sub(r"^\d+\.\s", "", line).strip()
+            ListBuffer.append(item)
+            ordered = True
+            i += 1
+
+            if i == len(lines) or not re.match(r"\d+\.\s", lines[i].strip()):
                 blocks.append(ListBlock(items=ListBuffer, ordered=ordered))
                 ListBuffer = []
             continue
