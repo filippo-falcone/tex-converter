@@ -1,5 +1,6 @@
 import os
 from .parsers.txt_parser import TxtParser
+from .parsers.markdown_parser import MarkdownParser
 from .generators.latex_generator import LatexGenerator
 from .model.document import Document
 
@@ -15,6 +16,9 @@ def Convert(InputPath: str, OutputPath: str) -> None:
     match ext:
         case ".txt":
             document: Document = TxtParser(InputPath)
+
+        case ".md":
+            document: Document = MarkdownParser(InputPath)
 
         case _:
             raise ValueError(f"Unsupported file format: {ext}")

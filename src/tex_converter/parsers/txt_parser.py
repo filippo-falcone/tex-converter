@@ -32,6 +32,7 @@ def TxtParser(path: str) -> Document:
         for line in f:
             line: str = line.strip()
             line = line.lstrip("\ufeff")  # Rimuove eventuali BOM residui
+
             if line:
                 blocks.append(Paragraph(text=line))
 
