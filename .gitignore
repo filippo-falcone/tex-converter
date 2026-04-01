@@ -34,8 +34,25 @@ MANIFEST
 # File generati dal tuo converter
 output.tex
 output/
+*.tex
 *.pdf
 sample.txt
+
+# File generati da LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.pdf
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.dvi
+*.ps
 
 # IDE
 .vscode/
