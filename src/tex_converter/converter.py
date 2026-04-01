@@ -21,5 +21,5 @@ def Convert(InputPath: str, OutputPath: str) -> None:
 
     LatexCode: str = LatexGenerator(document)
 
-    with open(OutputPath, "w") as f:
+    with open(OutputPath, "w", encoding="utf-8") as f:
         f.write(LatexCode)
