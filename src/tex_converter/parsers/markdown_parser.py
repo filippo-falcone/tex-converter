@@ -1,7 +1,7 @@
 import chardet
 from typing import List
 from ..model.document import Document, Block
-from ..model.blocks import Paragraph, Heading
+from ..model.blocks import Paragraph, Heading, ListBlock
 
 
 def MarkdownParser(path: str) -> Document:
@@ -29,6 +29,8 @@ def MarkdownParser(path: str) -> Document:
         lines: List[str] = f.readlines()
 
     blocks: List[Block] = []
+    ListBuffer: List[str] = []
+    ordered: bool = False
     i: int = 0
 
     while i < len(lines):
@@ -41,6 +43,16 @@ def MarkdownParser(path: str) -> Document:
             heading_text: str = line.lstrip("#").strip()
             blocks.append(Heading(level=level, text=heading_text))
             i += 1
+            continue
+
+        # Liste non ordinate: - item
+        if line.startswith("- "):
+            ListBuffer.append(line[2:].strip())
+            i += 1
+
+            if i == len(lines) or not lines[i].strip().startswith("- "):
+                blocks.append(ListBlock(items=ListBuffer, ordered=ordered))
+                ListBuffer = []
             continue
 
         # Paragrafo normale

@@ -37,6 +37,7 @@ output/
 *.tex
 *.pdf
 sample.txt
+sample.md
 
 # File generati da LaTeX
 *.aux
