@@ -2,7 +2,7 @@ import re
 import chardet
 from typing import List
 from ..model.document import Document, Block
-from ..model.blocks import Paragraph, Heading, Image, ListBlock
+from ..model.blocks import Paragraph, Heading, Image, Formula, ListBlock
 
 
 def MarkdownParser(path: str) -> Document:
@@ -75,6 +75,20 @@ def MarkdownParser(path: str) -> Document:
             PathImg: str = ImgMatch.groups()[1]
             blocks.append(Image(path=PathImg, caption=alt))
             i += 1
+            continue
+
+        # Formule Display: $$formula$$
+        if line.startswith("$$"):
+            FormulaLines: List[str] = []
+            i += 1
+
+            # Raccogli tutte le linee fino alla chiusura $$
+            while i < len(lines) and not lines[i].strip().startswith("$$"):
+                FormulaLines.append(lines[i])
+                i += 1
+
+            blocks.append(Formula(latex="\n".join(FormulaLines), display=True))
+            i += 1  # Salta la linea di chiusura $$
             continue
 
         # Paragrafo normale

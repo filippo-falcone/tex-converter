@@ -36,7 +36,7 @@ def LatexGenerator(document: Document) -> str:
                 lines.append("")
 
             case Image(path=p, caption=c):
-                lines.append("\\begin{figure}[h]")
+                lines.append("\\begin{figure}[ht]")
                 lines.append("\\centering")
                 lines.append(f"\\includegraphics[width=\\linewidth]{{{p}}}")
                 if c:
