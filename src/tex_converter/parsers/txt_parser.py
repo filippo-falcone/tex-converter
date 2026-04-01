@@ -3,7 +3,7 @@ from ..model.document import Document, Block
 from ..model.blocks import Paragraph
 
 
-def parse_txt(path: str) -> Document:
+def TxtParser(path: str) -> Document:
     """Funzione per analizzare un file di testo e convertirlo in un documento LaTeX.
     Ogni riga del file di testo viene considerata un paragrafo separato.
     Args:

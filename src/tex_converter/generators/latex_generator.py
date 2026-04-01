@@ -3,7 +3,7 @@ from ..model.document import Document
 from ..model.blocks import Paragraph, Heading, Image, Formula, ListBlock, Table
 
 
-def generate_latex(document: Document) -> str:
+def LatexGenerator(document: Document) -> str:
     """Genera il codice LaTeX a partire da un documento rappresentato come istanza di Document.
     Args:
         document (Document): Il documento da convertire in LaTeX.
@@ -75,5 +75,6 @@ def generate_latex(document: Document) -> str:
 
             case _:
                 raise ValueError(f"Tipo di blocco non gestito: {type(block)}")
+
     lines.append("\\end{document}")
     return "\n".join(lines)
