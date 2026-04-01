@@ -91,6 +91,14 @@ def MarkdownParser(path: str) -> Document:
             i += 1  # Salta la linea di chiusura $$
             continue
 
+        # Formule Inline: $formula$
+        InlineFormula = re.findall(r"\$(.+?)\$", line)
+        if InlineFormula:
+            for formula in InlineFormula:
+                blocks.append(Formula(latex=formula, display=False))
+            i += 1
+            continue
+
         # Paragrafo normale
         if line:
             blocks.append(Paragraph(text=line))
