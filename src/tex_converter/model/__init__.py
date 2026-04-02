@@ -1,0 +1,80 @@
+"""
+Modello dati per tex-converter.
+
+Contiene le definizioni dell'AST (Abstract Syntax Tree):
+- Document: Contenitore di livello superiore con metadati
+- Block: Elementi a livello di blocco (paragrafi, titoli, liste, ecc.)
+- Inline: Elementi inline (grassetto, corsivo, link, codice, ecc.)
+"""
+
+from .document import Document
+from .blocks import (
+    Block,
+    Paragraph,
+    Heading,
+    CodeBlock,
+    Blockquote,
+    Image,
+    Table,
+    TableRow,
+    TableCell,
+    ListBlock,
+    ListItem,
+    HorizontalRule,
+    Formula,
+    HtmlBlock,
+    HtmlComment,
+    TaskList,
+    TaskItem,
+    Inline,
+    Text,
+    Bold,
+    Italic,
+    Strikethrough,
+    CodeInline,
+    Link,
+    ImageInline,
+    MathInline,
+    LineBreak,
+    HtmlInline,
+    Superscript,
+    Subscript,
+    Highlight,
+    Footnote,
+)
+
+__all__: list[str] = [
+    "Document",
+    "Block",
+    "Paragraph",
+    "Heading",
+    "CodeBlock",
+    "Blockquote",
+    "Image",
+    "Table",
+    "TableRow",
+    "TableCell",
+    "ListBlock",
+    "ListItem",
+    "HorizontalRule",
+    "Formula",
+    "HtmlBlock",
+    "HtmlComment",
+    "TaskList",
+    "TaskItem",
+    "Inline",
+    "Text",
+    "Bold",
+    "Italic",
+    "Strikethrough",
+    "CodeInline",
+    "Link",
+    "ImageInline",
+    "MathInline",
+    "LineBreak",
+    "HtmlInline",
+    "Superscript",
+    "Subscript",
+    "Highlight",
+    "Footnote",
+]
