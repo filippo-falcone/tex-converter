@@ -208,10 +208,14 @@ def BlockToLatex(block: Block) -> str:
             html_content: str = block.html.strip()
             if not html_content:
                 return ""
-            lines: List[str] = ["% HTML Block:"] + [
-                f"% {line.rstrip()}" for line in html_content.split("\n")
-            ]
-            return "\n".join(lines) + "\n\n"
+            return (
+                rf"\begin{{quote}}"
+                + "\n"
+                + EscapeLatex(html_content)
+                + "\n"
+                + rf"\end{{quote}}"
+                + "\n\n"
+            )
 
         # -------------------------
         # ListBlock
