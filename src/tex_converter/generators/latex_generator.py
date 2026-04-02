@@ -150,9 +150,9 @@ def BlockToLatex(block: Block) -> str:
         # -------------------------
         case Image():
             latex: List[str] = [
-                r"\begin{figure}[ht]",
+                r"\begin{figure}[b]",
                 r"\centering",
-                rf"\includegraphics[width=\linewidth]{{{block.path}}}",
+                rf"\includegraphics[width=0.88\linewidth,keepaspectratio]{{{block.path}}}",
             ]
             if block.caption:
                 latex.append(rf"\caption{{{EscapeLatex(block.caption)}}}")
@@ -205,7 +205,13 @@ def BlockToLatex(block: Block) -> str:
         # HTML block
         # -------------------------
         case HtmlBlock():
-            return "% HTML block ignored\n"
+            html_content: str = block.html.strip()
+            if not html_content:
+                return ""
+            lines: List[str] = ["% HTML Block:"] + [
+                f"% {line.rstrip()}" for line in html_content.split("\n")
+            ]
+            return "\n".join(lines) + "\n\n"
 
         # -------------------------
         # ListBlock
