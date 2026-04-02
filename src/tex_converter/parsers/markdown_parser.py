@@ -157,6 +157,22 @@ def MarkdownParser(path: str) -> Document:
             i += 1
             continue
 
+        # HTML: <tag>...</tag>
+        if re.match(r"<[A-Za-z]+", line):
+            HtmlLines: List[str] = [line]
+            i += 1
+
+            while i < len(lines) and not lines[i].strip().startswith("</"):
+                HtmlLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            if i < len(lines):
+                HtmlLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
+            continue
+
         # Paragrafo normale
         if line:
             blocks.append(MakeParagraph(line))
