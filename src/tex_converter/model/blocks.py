@@ -171,7 +171,7 @@ class TableRow:
 class Table(Block):
     """Rappresenta una tabella in un documento LaTeX. Può avere intestazioni opzionali e un numero variabile di righe."""
 
-    headers: Optional[TableRow]
+    header: Optional[TableRow]
     rows: List[TableRow]
 
 

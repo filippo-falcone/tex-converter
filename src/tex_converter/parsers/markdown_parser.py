@@ -173,6 +173,32 @@ def MarkdownParser(path: str) -> Document:
             blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
             continue
 
+        # Tabelle: | Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |
+        if "|" in line and re.match(r"\|.*\|", line):
+            HeaderCells: List[TableCell] = [
+                TableCell(children=[Text(c.strip())])
+                for c in line.strip("|").split("|")
+            ]
+            header = TableRow(cells=HeaderCells)
+
+            i += 1
+
+            # Salta la riga di separazione (es. |---|---|)
+            if i < len(lines) and re.match(r"\|[-: ]+\|", lines[i].strip()):
+                i += 1
+
+            rows: List[TableRow] = []
+            while i < len(lines) and "|" in lines[i]:
+                row_cells: List[TableCell] = [
+                    TableCell(children=[Text(c.strip())])
+                    for c in lines[i].strip().strip("|").split("|")
+                ]
+                rows.append(TableRow(cells=row_cells))
+                i += 1
+
+            blocks.append(Table(header=header, rows=rows))
+            continue
+
         # Paragrafo normale
         if line:
             blocks.append(MakeParagraph(line))
