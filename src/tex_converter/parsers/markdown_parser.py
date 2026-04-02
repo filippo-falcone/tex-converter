@@ -334,6 +334,16 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
 
         if line.startswith("$$"):
+            # Caso 1: Formula su una sola riga: $$E = mc^2$$
+            rest_of_line = line[2:]  # Rimuove i primi $$
+            if "$$" in rest_of_line:
+                # Formula terminata sulla stessa riga
+                formula_content = rest_of_line.split("$$")[0].strip()
+                blocks.append(Formula(latex=formula_content, display=True))
+                i += 1
+                continue
+
+            # Caso 2: Formula su più righe
             FormulaLines: List[str] = []
             i += 1
 
@@ -343,7 +353,8 @@ def MarkdownParser(path: str) -> Document:
                 i += 1
 
             blocks.append(Formula(latex="\n".join(FormulaLines), display=True))
-            i += 1  # Salta la linea di chiusura $$
+            if i < len(lines):
+                i += 1  # Salta la linea di chiusura $$
             continue
 
         # -------------------------

@@ -69,6 +69,7 @@ def InlineToLatex(inlines: List[Inline]) -> str:
                 escaped_code: str = c.replace("\\", r"\textbackslash{}")
                 escaped_code = escaped_code.replace("{", r"\{")
                 escaped_code = escaped_code.replace("}", r"\}")
+                escaped_code = escaped_code.replace("_", r"\_")
                 out.append(r"\texttt{" + escaped_code + "}")
 
             # -------------------------
@@ -149,14 +150,14 @@ def BlockToLatex(block: Block) -> str:
         # Image block
         # -------------------------
         case Image():
-            latex: List[str] = [
-                r"\begin{figure}[b]",
-                r"\centering",
-                rf"\includegraphics[width=0.88\linewidth,keepaspectratio]{{{block.path}}}",
-            ]
+            latex: List[str] = [r"{\centering"]
+            latex.append(
+                rf"\includegraphics[width=0.88\linewidth,keepaspectratio]{{{block.path}}}"
+            )
             if block.caption:
-                latex.append(rf"\caption{{{EscapeLatex(block.caption)}}}")
-            latex.append(r"\end{figure}")
+                latex.append(r"")
+                latex.append(rf"{{\small {EscapeLatex(block.caption)}}}")
+            latex.append(r"\par}")
             return "\n".join(latex) + "\n\n"
 
         # -------------------------
@@ -256,7 +257,8 @@ def BlockToLatex(block: Block) -> str:
 
             # Header
             HeaderCells: List[str] = [
-                InlineToLatex(cell.children).strip() for cell in HeaderRow.cells
+                "{" + InlineToLatex(cell.children).strip() + "}"
+                for cell in HeaderRow.cells
             ]
             out.append(" & ".join(HeaderCells) + r" \\")
             out.append(r"\hline")
@@ -264,12 +266,14 @@ def BlockToLatex(block: Block) -> str:
             # Rows
             for row in DataRows:
                 RowCells: List[str] = [
-                    InlineToLatex(cell.children).strip() for cell in row.cells
+                    "\\makecell{" + InlineToLatex(cell.children).strip() + "}"
+                    for cell in row.cells
                 ]
                 out.append(" & ".join(RowCells) + r" \\")
 
             out.append(r"\hline")
             out.append(r"\end{tabular}")
+            out.append(r"\vspace{0.5\baselineskip}")
 
             return "\n".join(out) + "\n\n"
 
@@ -295,7 +299,7 @@ def LatexGenerator(document: Document) -> str:
     """
     lines = []
 
-    # ===================== PREAMBLE ESTESO =====================
+    # ===================== PREAMBLE =====================
     lines.append(r"\documentclass[11pt,a4paper]{article}")
     lines.append(r"\usepackage[utf8]{inputenc}")
     lines.append(r"\usepackage[italian]{babel}")
@@ -307,6 +311,8 @@ def LatexGenerator(document: Document) -> str:
     lines.append(r"\usepackage{xcolor}")
     lines.append(r"\usepackage{listings}")
     lines.append(r"\usepackage{microtype}")
+    lines.append(r"\usepackage{float}")
+    lines.append(r"\usepackage{makecell}")
     lines.append(r"\usepackage[margin=1in]{geometry}")
     lines.append(r"")
 
