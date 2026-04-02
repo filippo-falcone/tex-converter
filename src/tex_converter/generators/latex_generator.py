@@ -30,6 +30,7 @@ from ..model.blocks import (
     LineBreak,
     Superscript,
     Subscript,
+    Highlight,
     Inline,
 )
 from ..utils import EscapeLatex, EscapeLatexUrl
@@ -129,6 +130,12 @@ def InlineToLatex(inlines: List[Inline]) -> str:
             # -------------------------
             case Subscript(children=children):
                 out.append(r"\textsubscript{" + InlineToLatex(children) + "}")
+
+            # -------------------------
+            # Highlight
+            # -------------------------
+            case Highlight(children=children):
+                out.append(r"\colorbox{yellow}{" + InlineToLatex(children) + "}")
 
             # -------------------------
             # Default

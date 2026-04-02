@@ -111,6 +111,13 @@ class Subscript(Inline):
     children: List[Inline]
 
 
+@dataclass
+class Highlight(Inline):
+    """Rappresenta un testo evidenziato (highlight) in un documento LaTeX."""
+
+    children: List[Inline]
+
+
 # =========================
 # Blocchi principali
 # =========================

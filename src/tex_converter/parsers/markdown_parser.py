@@ -32,6 +32,7 @@ from ..model.blocks import (
     LineBreak,
     Superscript,
     Subscript,
+    Highlight,
 )
 
 
@@ -128,6 +129,28 @@ def ParseInline(text: str) -> List[Inline]:
                 continue
 
         # -------------------------
+        # Highlight: ==text==
+        # -------------------------
+        if text.startswith("==", i):
+            end: int = text.find("==", i + 2)
+            if end != -1:
+                inner: List[Inline] = ParseInline(text[i + 2 : end])
+                tokens.append(Highlight(children=inner))
+                i: int = end + 2
+                continue
+
+        # -------------------------
+        # HTML Highlight: <mark>content</mark>
+        # -------------------------
+        mark_match: re.Match[str] | None = re.match(r"<mark>(.*?)</mark>", text[i:])
+        if mark_match:
+            content: str = mark_match.group(1)
+            inner: List[Inline] = ParseInline(content)
+            tokens.append(Highlight(children=inner))
+            i += mark_match.end()
+            continue
+
+        # -------------------------
         # HTML Superscript: <sup>content</sup>
         # -------------------------
         sup_match: re.Match[str] | None = re.match(r"<sup>(.*?)</sup>", text[i:])
@@ -171,34 +194,6 @@ def ParseInline(text: str) -> List[Inline]:
                 inner: List[Inline] = ParseInline(content)
                 tokens.append(Subscript(children=inner))
                 i: int = end + 1
-                continue
-
-        # -------------------------
-        # Superscript: ^content (single ^ followed by non-whitespace)
-        # -------------------------
-        if text[i] == "^" and not text.startswith("^^", i):
-            match_super: re.Match[str] | None = re.match(
-                r"\^([^\s\^~\*_\[\]()]+)", text[i:]
-            )
-            if match_super:
-                content: str = match_super.group(1)
-                inner: List[Inline] = ParseInline(content)
-                tokens.append(Superscript(children=inner))
-                i += match_super.end()
-                continue
-
-        # -------------------------
-        # Subscript: ~content (single ~ followed by non-whitespace, but not ~~)
-        # -------------------------
-        if text[i] == "~" and not text.startswith("~~", i):
-            match_sub: re.Match[str] | None = re.match(
-                r"~([^\s\^~\*_\[\]()]+)", text[i:]
-            )
-            if match_sub:
-                content: str = match_sub.group(1)
-                inner: List[Inline] = ParseInline(content)
-                tokens.append(Subscript(children=inner))
-                i += match_sub.end()
                 continue
 
         # -------------------------
