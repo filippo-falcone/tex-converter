@@ -3,6 +3,7 @@ import chardet
 from typing import List
 from ..model.document import Document, Block
 from ..model.blocks import (
+    Inline,
     Paragraph,
     Heading,
     Image,
@@ -17,6 +18,13 @@ from ..model.blocks import (
     TableRow,
     TableCell,
     Text,
+    Bold,
+    Italic,
+    CodeInline,
+    Link,
+    ImageInline,
+    MathInline,
+    HtmlInline,
 )
 
 
@@ -28,6 +36,118 @@ def MakeParagraph(text: str) -> Paragraph:
         Paragraph: Il paragrafo creato.
     """
     return Paragraph(children=[Text(text)])
+
+
+def ParseInline(text: str) -> List[Inline]:
+    """Funzione per analizzare il testo inline e identificare eventuali formule o altri elementi inline.
+    Args:
+        text (str): Il testo da analizzare.
+    Returns:
+        List[Inline]: Una lista di elementi inline identificati nel testo.
+    """
+
+    tokens: List[Inline] = []
+    i = 0
+
+    while i < len(text):
+
+        # -------------------------
+        # Code inline: `code`
+        # -------------------------
+        if text[i] == "`":
+            end: int = text.find("`", i + 1)
+            if end != -1:
+                code: str = text[i + 1 : end]
+                tokens.append(CodeInline(code=code))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # Math inline: $...$
+        # -------------------------
+        if text[i] == "$":
+            end: int = text.find("$", i + 1)
+            if end != -1:
+                expr: str = text[i + 1 : end]
+                tokens.append(MathInline(expr=expr))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # Image inline: ![alt](src)
+        # -------------------------
+        ImgMatch: re.Match = re.match(r"!\[(.*?)\]\((.*?)\)", text[i:])
+        if ImgMatch:
+            alt: str
+            src: str
+            alt, src = ImgMatch.groups()
+            tokens.append(ImageInline(src=src, alt=alt))
+            i += ImgMatch.end()
+            continue
+
+        # -------------------------
+        # Link: [text](url)
+        # -------------------------
+        link: re.Match = re.match(r"\[(.*?)\]\((.*?)\)", text[i:])
+        if link:
+            label: str
+            url: str
+            label, url = link.groups()
+            tokens.append(Link(children=[Text(label)], url=url))
+            i += link.end()
+            continue
+
+        # -------------------------
+        # Bold+italic: ***text***
+        # -------------------------
+        if text.startswith("***", i):
+            end: int = text.find("***", i + 3)
+            if end != -1:
+                inner: List[Inline] = ParseInline(text[i + 3 : end])
+                tokens.append(Bold(children=[Italic(children=inner)]))
+                i: int = end + 3
+                continue
+
+        # -------------------------
+        # Bold: **text**
+        # -------------------------
+        if text.startswith("**", i):
+            end: int = text.find("**", i + 2)
+            if end != -1:
+                inner: List[Inline] = ParseInline(text[i + 2 : end])
+                tokens.append(Bold(children=inner))
+                i: int = end + 2
+                continue
+
+        # -------------------------
+        # Italic: *text*
+        # -------------------------
+        if text.startswith("*", i):
+            end: int = text.find("*", i + 1)
+            if end != -1:
+                inner: List[Inline] = ParseInline(text[i + 1 : end])
+                tokens.append(Italic(children=inner))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # HTML inline: <span>...</span>
+        # -------------------------
+        if text[i] == "<":
+            end: int = text.find(">", i + 1)
+            if end != -1:
+                html: str = text[i : end + 1]
+                tokens.append(HtmlInline(html=html))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # Text normale
+        # -------------------------
+        tokens.append(Text(text[i]))
+        i += 1
+
+    return tokens
 
 
 def MarkdownParser(path: str) -> Document:
@@ -66,7 +186,6 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         # Heading
         # -------------------------
-
         if line.startswith("#"):
             level: int = len(line) - len(line.lstrip("#"))
             heading_text: str = line.lstrip("#").strip()
@@ -77,7 +196,6 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         # Code block ```
         # -------------------------
-
         if line.startswith("```"):
             language: str | None = line[3:].strip() or None
             CodeLines: List[str] = []
@@ -95,7 +213,6 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         # Blockquote >
         # -------------------------
-
         if line.startswith(">"):
             QuoteLines: List[str] = [line[1:].strip()]
             i += 1
@@ -110,7 +227,6 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         # Horizontal rule
         # -------------------------
-
         if line in ("---", "***", "___"):
             blocks.append(HorizontalRule())
             i += 1
@@ -119,7 +235,6 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         # HTML block
         # -------------------------
-
         if re.match(r"<[A-Za-z]+", line):
             HtmlLines: List[str] = [line]
             i += 1
@@ -160,12 +275,12 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         # Image ![alt](path)
         # -------------------------
-
         ImgMatch: re.Match[str] | None = re.match(r"!\[(.*?)\]\((.*?)\)", line)
         if ImgMatch:
-            alt: str = ImgMatch.groups()[0]
-            PathImg: str = ImgMatch.groups()[1]
-            blocks.append(Image(path=PathImg, alt=alt, caption=alt))
+            alt: str
+            src: str
+            alt, src = ImgMatch.groups()
+            blocks.append(Image(path=src, alt=alt, caption=alt))
             i += 1
             continue
 
