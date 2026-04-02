@@ -156,15 +156,18 @@ def InlineToLatex(inlines: List[Inline]) -> str:
 # ============================================================
 # BLOCK → LATEX
 # ============================================================
-def BlockToLatex(block: Block) -> str:
+def BlockToLatex(block: Block, img_counter: dict | None = None) -> str:
     """Funzione ricorsiva che converte un blocco in LaTeX. Gestisce diversi tipi di blocchi come paragrafi, intestazioni, immagini, formule, liste e tabelle.
     Args:
         block (Block): Il blocco da convertire in LaTeX.
+        img_counter (dict): Dizionario con contatore delle immagini {"count": numero}
     Returns:
         str: La rappresentazione in LaTeX del blocco.
     Raises:
         ValueError: Se viene fornito un tipo di blocco non supportato.
     """
+    if img_counter is None:
+        img_counter = {"count": 0}
     match block:
 
         # -------------------------
@@ -195,13 +198,17 @@ def BlockToLatex(block: Block) -> str:
         # Image block
         # -------------------------
         case Image():
+            img_counter["count"] += 1
+            fig_num = img_counter["count"]
             latex: List[str] = [r"{\centering"]
             latex.append(
                 rf"\includegraphics[width=0.88\linewidth,keepaspectratio]{{{block.path}}}"
             )
             if block.caption:
-                latex.append(r"")
-                latex.append(rf"{{\small {EscapeLatex(block.caption)}}}")
+                latex.append(r"\\")
+                latex.append(
+                    rf"{{\small \textit{{Fig. {fig_num}:}} {EscapeLatex(block.caption)}}}"
+                )
             latex.append(r"\par}")
             return "\n".join(latex) + "\n\n"
 
@@ -233,7 +240,7 @@ def BlockToLatex(block: Block) -> str:
         case Blockquote():
             inner_lines = []
             for b in block.children:
-                inner = BlockToLatex(b).strip()
+                inner = BlockToLatex(b, img_counter).strip()
                 if inner:
                     inner_lines.append(inner)
             inner: str = "\n".join(inner_lines)
@@ -280,7 +287,7 @@ def BlockToLatex(block: Block) -> str:
             for item in block.items:
                 item_lines = []
                 for b in item.children:
-                    item_content: str = BlockToLatex(b).strip()
+                    item_content: str = BlockToLatex(b, img_counter).strip()
                     if item_content:
                         item_lines.append(item_content)
                 if item_lines:
@@ -297,7 +304,7 @@ def BlockToLatex(block: Block) -> str:
                 checkbox: str = r"$\checkmark$" if item.checked else r"$\square$"
                 item_lines = []
                 for b in item.children:
-                    item_content: str = BlockToLatex(b).strip()
+                    item_content: str = BlockToLatex(b, img_counter).strip()
                     if item_content:
                         item_lines.append(item_content)
                 if item_lines:
@@ -398,8 +405,9 @@ def LatexGenerator(document: Document) -> str:
     lines.append(r"")
 
     # ===================== CONTENUTO =====================
+    img_counter: dict = {"count": 0}
     for block in document.blocks:
-        latex_block: str = BlockToLatex(block)
+        latex_block: str = BlockToLatex(block, img_counter)
         if latex_block.strip():  # Solo se non vuoto
             lines.append(latex_block)
 
