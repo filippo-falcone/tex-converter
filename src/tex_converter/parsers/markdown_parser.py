@@ -69,7 +69,7 @@ def ParseInline(text: str) -> List[Inline]:
         # -------------------------
         # Image inline: ![alt](src)
         # -------------------------
-        ImgMatch: re.Match = re.match(r"!\[(.*?)\]\((.*?)\)", text[i:])
+        ImgMatch: re.Match[str] | None = re.match(r"!\[(.*?)\]\((.*?)\)", text[i:])
         if ImgMatch:
             alt: str
             src: str
@@ -81,7 +81,7 @@ def ParseInline(text: str) -> List[Inline]:
         # -------------------------
         # Link: [text](url)
         # -------------------------
-        link: re.Match = re.match(r"\[(.*?)\]\((.*?)\)", text[i:])
+        link: re.Match[str] | None = re.match(r"\[(.*?)\]\((.*?)\)", text[i:])
         if link:
             label: str
             url: str
@@ -183,8 +183,7 @@ def MarkdownParser(path: str) -> Document:
         lines: List[str] = f.readlines()
 
     blocks: List[Block] = []
-    ListBuffer: List[str] = []
-    ordered: bool = False
+    ListBuffer: List[ListItem] = []
     i: int = 0
 
     while i < len(lines):
@@ -261,6 +260,38 @@ def MarkdownParser(path: str) -> Document:
                 i += 1
 
             blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
+            continue
+
+        # -------------------------
+        # Unordered list: - item
+        # -------------------------
+        if line.startswith("- "):
+            ItemText: str = line[2:].strip()
+            ListBuffer.append(
+                ListItem(children=[Paragraph(children=ParseInline(ItemText))])
+            )
+            i += 1
+
+            # Fine lista
+            if i == len(lines) or not lines[i].strip().startswith("- "):
+                blocks.append(ListBlock(items=ListBuffer, ordered=False))
+                ListBuffer = []
+            continue
+
+        # -------------------------
+        # Ordered list: 1. item
+        # -------------------------
+        if re.match(r"\d+\.\s", line):
+            ItemText: str = re.sub(r"^\d+\.\s", "", line).strip()
+            ListBuffer.append(
+                ListItem(children=[Paragraph(children=ParseInline(ItemText))])
+            )
+            i += 1
+
+            # Fine lista
+            if i == len(lines) or not re.match(r"\d+\.\s", lines[i].strip()):
+                blocks.append(ListBlock(items=ListBuffer, ordered=True))
+                ListBuffer = []
             continue
 
         # -------------------------
