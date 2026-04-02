@@ -10,7 +10,7 @@ from ..model.blocks import (
     ListBlock,
     ListItem,
     CodeBlock,
-    BlockQuote,
+    Blockquote,
     HorizontalRule,
     HtmlBlock,
     Table,
@@ -137,6 +137,18 @@ def MarkdownParser(path: str) -> Document:
 
             blocks.append(CodeBlock(language=language, code="\n".join(CodeLines)))
             i += 1  # Salta la linea di chiusura ```
+            continue
+
+        # Blockquote: > quote
+        if line.startswith(">"):
+            QuoteLines: List[str] = [line[1:].strip()]
+            i += 1
+
+            while i < len(lines) and lines[i].strip().startswith(">"):
+                QuoteLines.append(lines[i].strip()[1:].strip())
+                i += 1
+
+            blocks.append(Blockquote(children=[MakeParagraph("\n".join(QuoteLines))]))
             continue
 
         # Paragrafo normale

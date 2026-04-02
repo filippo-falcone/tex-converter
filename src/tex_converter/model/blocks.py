@@ -181,7 +181,7 @@ class Table(Block):
 
 
 @dataclass
-class BlockQuote(Block):
+class Blockquote(Block):
     """Rappresenta un blocco di citazione in un documento LaTeX."""
 
     children: List[Block]
