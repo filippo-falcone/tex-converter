@@ -151,6 +151,12 @@ def MarkdownParser(path: str) -> Document:
             blocks.append(Blockquote(children=[MakeParagraph("\n".join(QuoteLines))]))
             continue
 
+        # Horizontal Rule: --- o *** o ___
+        if line in ("---", "***", "___"):
+            blocks.append(HorizontalRule())
+            i += 1
+            continue
+
         # Paragrafo normale
         if line:
             blocks.append(MakeParagraph(line))
