@@ -2,7 +2,32 @@ import re
 import chardet
 from typing import List
 from ..model.document import Document, Block
-from ..model.blocks import Paragraph, Heading, Image, Formula, ListBlock
+from ..model.blocks import (
+    Paragraph,
+    Heading,
+    Image,
+    Formula,
+    ListBlock,
+    ListItem,
+    CodeBlock,
+    BlockQuote,
+    HorizontalRule,
+    HtmlBlock,
+    Table,
+    TableRow,
+    TableCell,
+    Text,
+)
+
+
+def MakeParagraph(text: str) -> Paragraph:
+    """Funzione per creare un paragrafo da una stringa di testo.
+    Args:
+        text (str): Il testo da convertire in un paragrafo.
+    Returns:
+        Paragraph: Il paragrafo creato.
+    """
+    return Paragraph(children=[Text(text)])
 
 
 def MarkdownParser(path: str) -> Document:
@@ -42,7 +67,7 @@ def MarkdownParser(path: str) -> Document:
         if line.startswith("#"):
             level: int = len(line) - len(line.lstrip("#"))
             heading_text: str = line.lstrip("#").strip()
-            blocks.append(Heading(level=level, text=heading_text))
+            blocks.append(Heading(level=level, children=[Text(text=heading_text)]))
             i += 1
             continue
 
@@ -73,7 +98,7 @@ def MarkdownParser(path: str) -> Document:
         if ImgMatch:
             alt: str = ImgMatch.groups()[0]
             PathImg: str = ImgMatch.groups()[1]
-            blocks.append(Image(path=PathImg, caption=alt))
+            blocks.append(Image(path=PathImg, alt=alt, caption=alt))
             i += 1
             continue
 
@@ -99,9 +124,24 @@ def MarkdownParser(path: str) -> Document:
             i += 1
             continue
 
+        # Blocchi di codice: ```language\ncode\n```
+        if line.startswith("```"):
+            language: str | None = line[3:].strip() or None
+            CodeLines: List[str] = []
+            i += 1
+
+            # Raccogli tutte le linee fino alla chiusura ```
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                CodeLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            blocks.append(CodeBlock(language=language, code="\n".join(CodeLines)))
+            i += 1  # Salta la linea di chiusura ```
+            continue
+
         # Paragrafo normale
         if line:
-            blocks.append(Paragraph(text=line))
+            blocks.append(MakeParagraph(line))
         i += 1
 
     return Document(blocks=blocks)

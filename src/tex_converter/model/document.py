@@ -1,8 +1,38 @@
 from dataclasses import dataclass
 from typing import List, Union
-from .blocks import Paragraph, Heading, Image, Formula, ListBlock, Table
+from .blocks import (
+    Paragraph,
+    Heading,
+    Image,
+    Formula,
+    ListBlock,
+    ListItem,
+    CodeBlock,
+    BlockQuote,
+    HorizontalRule,
+    HtmlBlock,
+    Table,
+    TableRow,
+    TableCell,
+    Text,
+)
 
-Block = Union[Paragraph, Heading, Image, Formula, ListBlock, Table]
+Block = Union[
+    Paragraph,
+    Heading,
+    Image,
+    Formula,
+    ListBlock,
+    ListItem,
+    CodeBlock,
+    BlockQuote,
+    HorizontalRule,
+    HtmlBlock,
+    Table,
+    TableRow,
+    TableCell,
+    Text,
+]
 
 
 @dataclass

@@ -6,12 +6,14 @@ from typing import List, Optional
 # =========================
 
 
+@dataclass
 class Block:
     """Classe base astratta per tutti i blocchi di un documento (elementi a livello di paragrafo)."""
 
     pass
 
 
+@dataclass
 class Inline:
     """Classe base astratta per tutti gli elementi inline (dentro paragrafi, heading, celle, ecc.)."""
 
