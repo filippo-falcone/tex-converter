@@ -162,6 +162,21 @@ class ListBlock(Block):
     ordered: bool = False
 
 
+@dataclass
+class TaskItem(Block):
+    """Rappresenta un elemento di una task list in un documento LaTeX."""
+
+    checked: bool
+    children: List[Block]
+
+
+@dataclass
+class TaskList(Block):
+    """Rappresenta una task list in un documento LaTeX."""
+
+    items: List[TaskItem]
+
+
 # =========================
 # Tabelle
 # =========================

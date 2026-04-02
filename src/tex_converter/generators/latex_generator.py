@@ -8,6 +8,8 @@ from ..model.blocks import (
     Formula,
     ListBlock,
     ListItem,
+    TaskList,
+    TaskItem,
     CodeBlock,
     Blockquote,
     HorizontalRule,
@@ -256,6 +258,23 @@ def BlockToLatex(block: Block) -> str:
                 if item_lines:
                     out.append(rf"\item {' '.join(item_lines)}")
             out.append(rf"\end{{{env}}}")
+            return "\n".join(out) + "\n\n"
+
+        # -------------------------
+        # Task list
+        # -------------------------
+        case TaskList():
+            out: List[str] = [r"\begin{itemize}"]
+            for item in block.items:
+                checkbox: str = r"$\checkmark$" if item.checked else r"$\square$"
+                item_lines = []
+                for b in item.children:
+                    item_content: str = BlockToLatex(b).strip()
+                    if item_content:
+                        item_lines.append(item_content)
+                if item_lines:
+                    out.append(rf"\item {checkbox} {' '.join(item_lines)}")
+            out.append(r"\end{itemize}")
             return "\n".join(out) + "\n\n"
 
         # -------------------------

@@ -10,6 +10,8 @@ from ..model.blocks import (
     Formula,
     ListBlock,
     ListItem,
+    TaskList,
+    TaskItem,
     CodeBlock,
     Blockquote,
     HorizontalRule,
@@ -229,6 +231,7 @@ def MarkdownParser(path: str) -> Document:
 
     blocks: List[Block] = []
     ListBuffer: List[ListItem] = []
+    TaskBuffer: List[TaskItem] = []
     i: int = 0
 
     while i < len(lines):
@@ -332,6 +335,25 @@ def MarkdownParser(path: str) -> Document:
 
             blocks.append(HtmlComment(comment="\n".join(CommentLines)))
             continue
+
+        # -------------------------
+        # Task list: - [ ] item or - [x] item
+        # -------------------------
+        if re.match(r"- \[([ xX])\]", line):
+            match = re.match(r"- \[([ xX])\]\s*(.*)", line)
+            if match:
+                checked = match.group(1).lower() == 'x'
+                task_text = match.group(2).strip()
+                TaskBuffer.append(
+                    TaskItem(checked=checked, children=[Paragraph(children=ParseInline(task_text))])
+                )
+                i += 1
+                
+                # Fine task list
+                if i == len(lines) or not re.match(r"- \[([ xX])\]", lines[i].strip()):
+                    blocks.append(TaskList(items=TaskBuffer))
+                    TaskBuffer = []
+                continue
 
         # -------------------------
         # Unordered list: - item
