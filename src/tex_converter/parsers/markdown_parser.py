@@ -39,17 +39,16 @@ def MarkdownParser(path: str) -> Document:
     """
 
     with open(path, "rb") as f:
-        RawData: bytes = f.read()
-        detected: chardet.DetectionDict = chardet.detect(RawData)
+        raw: bytes = f.read()
+        detected: chardet.DetectionDict = chardet.detect(raw)
         encoding: str = (
             detected.get("encoding") or "utf-8"
         )  # Fallback a UTF-8 se non viene rilevata l'encoding
-        confidence: float = detected.get("confidence", 0)
-        print(f"Encoding rilevato: {encoding} (confidence: {confidence})")
-
-    # Se l'encoding è UTF-8, usiamo 'utf-8-sig' per gestire eventuali BOM
-    if encoding.lower() in ("utf-8", "utf-8-sig"):
-        encoding = "utf-8-sig"
+        if encoding.lower() in (
+            "utf-8",
+            "utf-8-sig",
+        ):  # Se l'encoding è UTF-8, usiamo 'utf-8-sig' per gestire eventuali BOM
+            encoding = "utf-8-sig"
 
     with open(path, "r", encoding=encoding) as f:
         lines: List[str] = f.readlines()
@@ -60,15 +59,80 @@ def MarkdownParser(path: str) -> Document:
     i: int = 0
 
     while i < len(lines):
-        line: str = lines[i].strip()
-        line = line.lstrip("\ufeff")  # Rimuove eventuali BOM residui
+        line: str = (
+            lines[i].rstrip("\n").lstrip("\ufeff").strip()
+        )  # Rimuove eventuali BOM residui
 
-        # Heading semplice: # Heading 1, ## Heading 2, ### Heading 3, etc.
+        # -------------------------
+        # Heading
+        # -------------------------
+
         if line.startswith("#"):
             level: int = len(line) - len(line.lstrip("#"))
             heading_text: str = line.lstrip("#").strip()
             blocks.append(Heading(level=level, children=[Text(text=heading_text)]))
             i += 1
+            continue
+
+        # -------------------------
+        # Code block ```
+        # -------------------------
+
+        if line.startswith("```"):
+            language: str | None = line[3:].strip() or None
+            CodeLines: List[str] = []
+            i += 1
+
+            # Raccogli tutte le linee fino alla chiusura ```
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                CodeLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            blocks.append(CodeBlock(language=language, code="\n".join(CodeLines)))
+            i += 1  # Salta la linea di chiusura ```
+            continue
+
+        # -------------------------
+        # Blockquote >
+        # -------------------------
+
+        if line.startswith(">"):
+            QuoteLines: List[str] = [line[1:].strip()]
+            i += 1
+
+            while i < len(lines) and lines[i].strip().startswith(">"):
+                QuoteLines.append(lines[i].strip()[1:].strip())
+                i += 1
+
+            blocks.append(Blockquote(children=[MakeParagraph("\n".join(QuoteLines))]))
+            continue
+
+        # -------------------------
+        # Horizontal rule
+        # -------------------------
+
+        if line in ("---", "***", "___"):
+            blocks.append(HorizontalRule())
+            i += 1
+            continue
+
+        # -------------------------
+        # HTML block
+        # -------------------------
+
+        if re.match(r"<[A-Za-z]+", line):
+            HtmlLines: List[str] = [line]
+            i += 1
+
+            while i < len(lines) and not lines[i].strip().startswith("</"):
+                HtmlLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            if i < len(lines):
+                HtmlLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
             continue
 
         # Liste non ordinate: - item
@@ -93,7 +157,10 @@ def MarkdownParser(path: str) -> Document:
                 ListBuffer = []
             continue
 
-        # Immagini: ![alt text](path)
+        # -------------------------
+        # Image ![alt](path)
+        # -------------------------
+
         ImgMatch: re.Match[str] | None = re.match(r"!\[(.*?)\]\((.*?)\)", line)
         if ImgMatch:
             alt: str = ImgMatch.groups()[0]
@@ -102,7 +169,10 @@ def MarkdownParser(path: str) -> Document:
             i += 1
             continue
 
-        # Formule Display: $$formula$$
+        # -------------------------
+        # Formula block $$
+        # -------------------------
+
         if line.startswith("$$"):
             FormulaLines: List[str] = []
             i += 1
@@ -116,64 +186,21 @@ def MarkdownParser(path: str) -> Document:
             i += 1  # Salta la linea di chiusura $$
             continue
 
-        # Formule Inline: $formula$
-        InlineFormula = re.findall(r"\$(.+?)\$", line)
+        # -------------------------
+        # Formula block $$
+        # -------------------------
+
+        InlineFormula: List[str] = re.findall(r"\$(.+?)\$", line)
         if InlineFormula:
             for formula in InlineFormula:
                 blocks.append(Formula(latex=formula, display=False))
             i += 1
             continue
 
-        # Blocchi di codice: ```language\ncode\n```
-        if line.startswith("```"):
-            language: str | None = line[3:].strip() or None
-            CodeLines: List[str] = []
-            i += 1
+        # -------------------------
+        # Table
+        # -------------------------
 
-            # Raccogli tutte le linee fino alla chiusura ```
-            while i < len(lines) and not lines[i].strip().startswith("```"):
-                CodeLines.append(lines[i].rstrip("\n"))
-                i += 1
-
-            blocks.append(CodeBlock(language=language, code="\n".join(CodeLines)))
-            i += 1  # Salta la linea di chiusura ```
-            continue
-
-        # Blockquote: > quote
-        if line.startswith(">"):
-            QuoteLines: List[str] = [line[1:].strip()]
-            i += 1
-
-            while i < len(lines) and lines[i].strip().startswith(">"):
-                QuoteLines.append(lines[i].strip()[1:].strip())
-                i += 1
-
-            blocks.append(Blockquote(children=[MakeParagraph("\n".join(QuoteLines))]))
-            continue
-
-        # Horizontal Rule: --- o *** o ___
-        if line in ("---", "***", "___"):
-            blocks.append(HorizontalRule())
-            i += 1
-            continue
-
-        # HTML: <tag>...</tag>
-        if re.match(r"<[A-Za-z]+", line):
-            HtmlLines: List[str] = [line]
-            i += 1
-
-            while i < len(lines) and not lines[i].strip().startswith("</"):
-                HtmlLines.append(lines[i].rstrip("\n"))
-                i += 1
-
-            if i < len(lines):
-                HtmlLines.append(lines[i].rstrip("\n"))
-                i += 1
-
-            blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
-            continue
-
-        # Tabelle: | Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |
         if "|" in line and re.match(r"\|.*\|", line):
             HeaderCells: List[TableCell] = [
                 TableCell(children=[Text(c.strip())])
@@ -199,7 +226,10 @@ def MarkdownParser(path: str) -> Document:
             blocks.append(Table(header=header, rows=rows))
             continue
 
-        # Paragrafo normale
+        # -------------------------
+        # Paragraph
+        # -------------------------
+
         if line:
             blocks.append(MakeParagraph(line))
         i += 1
