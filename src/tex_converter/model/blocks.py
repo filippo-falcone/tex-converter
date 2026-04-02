@@ -97,6 +97,20 @@ class LineBreak(Inline):
     pass
 
 
+@dataclass
+class Superscript(Inline):
+    """Rappresenta un testo in apice (superscript) in un documento LaTeX."""
+
+    children: List[Inline]
+
+
+@dataclass
+class Subscript(Inline):
+    """Rappresenta un testo in pedice (subscript) in un documento LaTeX."""
+
+    children: List[Inline]
+
+
 # =========================
 # Blocchi principali
 # =========================

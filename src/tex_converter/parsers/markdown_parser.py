@@ -30,6 +30,8 @@ from ..model.blocks import (
     MathInline,
     HtmlInline,
     LineBreak,
+    Superscript,
+    Subscript,
 )
 
 
@@ -123,6 +125,80 @@ def ParseInline(text: str) -> List[Inline]:
                 inner: List[Inline] = ParseInline(text[i + 2 : end])
                 tokens.append(Strikethrough(children=inner))
                 i: int = end + 2
+                continue
+
+        # -------------------------
+        # HTML Superscript: <sup>content</sup>
+        # -------------------------
+        sup_match: re.Match[str] | None = re.match(r"<sup>(.*?)</sup>", text[i:])
+        if sup_match:
+            content: str = sup_match.group(1)
+            inner: List[Inline] = ParseInline(content)
+            tokens.append(Superscript(children=inner))
+            i += sup_match.end()
+            continue
+
+        # -------------------------
+        # HTML Subscript: <sub>content</sub>
+        # -------------------------
+        sub_match: re.Match[str] | None = re.match(r"<sub>(.*?)</sub>", text[i:])
+        if sub_match:
+            content: str = sub_match.group(1)
+            inner: List[Inline] = ParseInline(content)
+            tokens.append(Subscript(children=inner))
+            i += sub_match.end()
+            continue
+
+        # -------------------------
+        # Pandoc Superscript: ^content^
+        # -------------------------
+        if text.startswith("^", i) and not text.startswith("^^", i):
+            end: int = text.find("^", i + 1)
+            if end != -1 and end > i + 1:
+                content: str = text[i + 1 : end]
+                inner: List[Inline] = ParseInline(content)
+                tokens.append(Superscript(children=inner))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # Pandoc Subscript: ~content~ (but not ~~strikethrough~~)
+        # -------------------------
+        if text[i] == "~" and not text.startswith("~~", i):
+            end: int = text.find("~", i + 1)
+            if end != -1 and end > i + 1 and not text.startswith("~~", end):
+                content: str = text[i + 1 : end]
+                inner: List[Inline] = ParseInline(content)
+                tokens.append(Subscript(children=inner))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # Superscript: ^content (single ^ followed by non-whitespace)
+        # -------------------------
+        if text[i] == "^" and not text.startswith("^^", i):
+            match_super: re.Match[str] | None = re.match(
+                r"\^([^\s\^~\*_\[\]()]+)", text[i:]
+            )
+            if match_super:
+                content: str = match_super.group(1)
+                inner: List[Inline] = ParseInline(content)
+                tokens.append(Superscript(children=inner))
+                i += match_super.end()
+                continue
+
+        # -------------------------
+        # Subscript: ~content (single ~ followed by non-whitespace, but not ~~)
+        # -------------------------
+        if text[i] == "~" and not text.startswith("~~", i):
+            match_sub: re.Match[str] | None = re.match(
+                r"~([^\s\^~\*_\[\]()]+)", text[i:]
+            )
+            if match_sub:
+                content: str = match_sub.group(1)
+                inner: List[Inline] = ParseInline(content)
+                tokens.append(Subscript(children=inner))
+                i += match_sub.end()
                 continue
 
         # -------------------------
@@ -342,13 +418,16 @@ def MarkdownParser(path: str) -> Document:
         if re.match(r"- \[([ xX])\]", line):
             match = re.match(r"- \[([ xX])\]\s*(.*)", line)
             if match:
-                checked = match.group(1).lower() == 'x'
+                checked = match.group(1).lower() == "x"
                 task_text = match.group(2).strip()
                 TaskBuffer.append(
-                    TaskItem(checked=checked, children=[Paragraph(children=ParseInline(task_text))])
+                    TaskItem(
+                        checked=checked,
+                        children=[Paragraph(children=ParseInline(task_text))],
+                    )
                 )
                 i += 1
-                
+
                 # Fine task list
                 if i == len(lines) or not re.match(r"- \[([ xX])\]", lines[i].strip()):
                     blocks.append(TaskList(items=TaskBuffer))

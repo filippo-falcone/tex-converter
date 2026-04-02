@@ -28,6 +28,8 @@ from ..model.blocks import (
     MathInline,
     HtmlInline,
     LineBreak,
+    Superscript,
+    Subscript,
     Inline,
 )
 from ..utils import EscapeLatex, EscapeLatexUrl
@@ -115,6 +117,18 @@ def InlineToLatex(inlines: List[Inline]) -> str:
             # -------------------------
             case LineBreak():
                 out.append(r"\\")
+
+            # -------------------------
+            # Superscript
+            # -------------------------
+            case Superscript(children=children):
+                out.append(r"\textsuperscript{" + InlineToLatex(children) + "}")
+
+            # -------------------------
+            # Subscript
+            # -------------------------
+            case Subscript(children=children):
+                out.append(r"\textsubscript{" + InlineToLatex(children) + "}")
 
             # -------------------------
             # Default
