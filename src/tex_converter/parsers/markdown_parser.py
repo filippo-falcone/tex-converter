@@ -20,6 +20,7 @@ from ..model.blocks import (
     Text,
     Bold,
     Italic,
+    Strikethrough,
     CodeInline,
     Link,
     ImageInline,
@@ -99,6 +100,17 @@ def ParseInline(text: str) -> List[Inline]:
                 inner: List[Inline] = ParseInline(text[i + 3 : end])
                 tokens.append(Bold(children=[Italic(children=inner)]))
                 i: int = end + 3
+                continue
+
+        # -------------------------
+        # Strikethrough: ~~text~~
+        # -------------------------
+        if text.startswith("~~", i):
+            end: int = text.find("~~", i + 2)
+            if end != -1:
+                inner: List[Inline] = ParseInline(text[i + 2 : end])
+                tokens.append(Strikethrough(children=inner))
+                i: int = end + 2
                 continue
 
         # -------------------------

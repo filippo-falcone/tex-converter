@@ -18,6 +18,7 @@ from ..model.blocks import (
     Text,
     Bold,
     Italic,
+    Strikethrough,
     CodeInline,
     Link,
     ImageInline,
@@ -61,6 +62,12 @@ def InlineToLatex(inlines: List[Inline]) -> str:
             # -------------------------
             case Italic(children=children):
                 out.append(r"\textit{" + InlineToLatex(children) + "}")
+
+            # -------------------------
+            # Strikethrough
+            # -------------------------
+            case Strikethrough(children=children):
+                out.append(r"\sout{" + InlineToLatex(children) + "}")
 
             # -------------------------
             # Code inline - ESCAPARE CONSERVATIVAMENTE
@@ -313,6 +320,7 @@ def LatexGenerator(document: Document) -> str:
     lines.append(r"\usepackage{microtype}")
     lines.append(r"\usepackage{float}")
     lines.append(r"\usepackage{makecell}")
+    lines.append(r"\usepackage[normalem]{ulem}")
     lines.append(r"\usepackage[margin=1in]{geometry}")
     lines.append(r"")
 

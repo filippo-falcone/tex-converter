@@ -47,6 +47,13 @@ class Italic(Inline):
 
 
 @dataclass
+class Strikethrough(Inline):
+    """Rappresenta un testo cancellato (strikethrough) in un documento LaTeX."""
+
+    children: List[Inline]
+
+
+@dataclass
 class CodeInline(Inline):
     """Rappresenta un testo in stile codice in un documento LaTeX."""
 
