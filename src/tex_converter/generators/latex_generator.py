@@ -25,6 +25,7 @@ from ..model.blocks import (
     ImageInline,
     MathInline,
     HtmlInline,
+    LineBreak,
     Inline,
 )
 from ..utils import EscapeLatex, EscapeLatexUrl
@@ -106,6 +107,12 @@ def InlineToLatex(inlines: List[Inline]) -> str:
             # -------------------------
             case HtmlInline():
                 out.append("")
+
+            # -------------------------
+            # Line break
+            # -------------------------
+            case LineBreak():
+                out.append(r"\\")
 
             # -------------------------
             # Default

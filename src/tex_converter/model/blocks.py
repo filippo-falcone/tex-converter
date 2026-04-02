@@ -90,6 +90,13 @@ class HtmlInline(Inline):
     html: str
 
 
+@dataclass
+class LineBreak(Inline):
+    """Rappresenta un hard line break (due spazi + newline) in un documento LaTeX."""
+
+    pass
+
+
 # =========================
 # Blocchi principali
 # =========================

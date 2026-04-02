@@ -27,6 +27,7 @@ from ..model.blocks import (
     ImageInline,
     MathInline,
     HtmlInline,
+    LineBreak,
 )
 
 
@@ -45,6 +46,14 @@ def ParseInline(text: str) -> List[Inline]:
     i = 0
 
     while i < len(text):
+
+        # -------------------------
+        # Hard line break: \x00LINEBREAK\x00
+        # -------------------------
+        if text[i:].startswith("\x00LINEBREAK\x00"):
+            tokens.append(LineBreak())
+            i += len("\x00LINEBREAK\x00")
+            continue
 
         # -------------------------
         # Code inline: `code`
@@ -223,9 +232,11 @@ def MarkdownParser(path: str) -> Document:
     i: int = 0
 
     while i < len(lines):
-        line: str = (
-            lines[i].rstrip("\n").lstrip("\ufeff").strip()
-        )  # Rimuove eventuali BOM residui
+        raw_line: str = lines[i].rstrip("\n").lstrip("\ufeff")
+        line: str = raw_line.strip()
+
+        # Verifica se la riga ha hard line break (due spazi finali)
+        has_line_break: bool = raw_line.rstrip() != raw_line and raw_line.endswith("  ")
 
         # -------------------------
         # Heading
@@ -306,7 +317,7 @@ def MarkdownParser(path: str) -> Document:
             if "-->" in line:
                 i += 1
                 continue
-            
+
             # Altrimenti è multi-line
             CommentLines: List[str] = [line]
             i += 1
@@ -424,11 +435,40 @@ def MarkdownParser(path: str) -> Document:
             continue
 
         # -------------------------
-        # Paragraph
+        # Paragraph (con supporto hard line breaks)
         # -------------------------
 
         if line:
-            blocks.append(Paragraph(children=ParseInline(line)))
-        i += 1
+            # Se questa riga ha hard line break, raccogliere tutte le linee conseguenti
+            if has_line_break:
+                paragraph_text: str = line.rstrip() + "\x00LINEBREAK\x00"
+                i += 1
+
+                # Continua a raccogliere righe finché hanno line break
+                while i < len(lines):
+                    next_raw: str = lines[i].rstrip("\n").lstrip("\ufeff")
+                    next_line: str = next_raw.strip()
+
+                    # Verifica se la prossima riga ha line break
+                    next_has_break: bool = (
+                        next_raw.rstrip() != next_raw and next_raw.endswith("  ")
+                    )
+
+                    if next_has_break:
+                        paragraph_text += next_line.rstrip() + "\x00LINEBREAK\x00"
+                        i += 1
+                    else:
+                        # Ultima riga di questa sequenza
+                        paragraph_text += next_line
+                        i += 1
+                        break
+
+                blocks.append(Paragraph(children=ParseInline(paragraph_text)))
+            else:
+                # Paragrafo semplice senza line break
+                blocks.append(Paragraph(children=ParseInline(line)))
+                i += 1
+        else:
+            i += 1
 
     return Document(blocks=blocks)
