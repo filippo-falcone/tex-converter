@@ -102,7 +102,18 @@ def ParseInline(text: str) -> List[Inline]:
                 continue
 
         # -------------------------
-        # Bold: **text**
+        # Bold (double underscore): __text__
+        # -------------------------
+        if text.startswith("__", i):
+            end: int = text.find("__", i + 2)
+            if end != -1:
+                inner: List[Inline] = ParseInline(text[i + 2 : end])
+                tokens.append(Bold(children=inner))
+                i: int = end + 2
+                continue
+
+        # -------------------------
+        # Bold (double asterisk): **text**
         # -------------------------
         if text.startswith("**", i):
             end: int = text.find("**", i + 2)
@@ -113,11 +124,23 @@ def ParseInline(text: str) -> List[Inline]:
                 continue
 
         # -------------------------
-        # Italic: *text*
+        # Italic (single underscore): _text_
+        # -------------------------
+        if text[i] == "_":
+            end: int = text.find("_", i + 1)
+            if end != -1 and end > i + 1:
+                # Check: almeno 1 char dentro
+                inner: List[Inline] = ParseInline(text[i + 1 : end])
+                tokens.append(Italic(children=inner))
+                i: int = end + 1
+                continue
+
+        # -------------------------
+        # Italic (single asterisk): *text*
         # -------------------------
         if text.startswith("*", i):
             end: int = text.find("*", i + 1)
-            if end != -1:
+            if end != -1 and end > i + 1:
                 inner: List[Inline] = ParseInline(text[i + 1 : end])
                 tokens.append(Italic(children=inner))
                 i: int = end + 1
