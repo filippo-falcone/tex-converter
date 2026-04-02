@@ -164,9 +164,9 @@ def BlockToLatex(block: Block) -> str:
         # -------------------------
         case Formula():
             if block.display:
-                return rf"\[" + "\n" + block.latex + "\n" + r"\]" + "\n\n"
+                return f"$${block.latex}$$\n\n"
             else:
-                return rf"${block.latex}$\n"
+                return f"${block.latex}$\n"
 
         # -------------------------
         # Code block
@@ -287,7 +287,7 @@ def LatexGenerator(document: Document) -> str:
 
     # ===================== PREAMBLE ESTESO =====================
     lines.append(r"\documentclass[11pt,a4paper]{article}")
-    lines.append(r"\usepackage[utf-8]{inputenc}")
+    lines.append(r"\usepackage[utf8]{inputenc}")
     lines.append(r"\usepackage[italian]{babel}")
     lines.append(r"\usepackage[T1]{fontenc}")
     lines.append(r"\usepackage{graphicx}")

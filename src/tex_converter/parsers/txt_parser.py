@@ -1,7 +1,7 @@
 import chardet
 from typing import List
-from ..model.document import Document, Block
-from ..model.blocks import Paragraph
+from ..model.document import Document
+from ..model.blocks import Block, Paragraph, Text
 
 
 def TxtParser(path: str) -> Document:
@@ -34,6 +34,6 @@ def TxtParser(path: str) -> Document:
             line = line.lstrip("\ufeff")  # Rimuove eventuali BOM residui
 
             if line:
-                blocks.append(Paragraph(text=line))
+                blocks.append(Paragraph(children=[Text(text=line)]))
 
     return Document(blocks=blocks)
