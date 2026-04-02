@@ -28,16 +28,9 @@ from ..model.blocks import (
 )
 
 
-def MakeParagraph(text: str) -> Paragraph:
-    """Funzione per creare un paragrafo da una stringa di testo.
-    Args:
-        text (str): Il testo da convertire in un paragrafo.
-    Returns:
-        Paragraph: Il paragrafo creato.
-    """
-    return Paragraph(children=[Text(text)])
-
-
+# ============================================================
+# INLINE PARSER
+# ============================================================
 def ParseInline(text: str) -> List[Inline]:
     """Funzione per analizzare il testo inline e identificare eventuali formule o altri elementi inline.
     Args:
@@ -150,6 +143,22 @@ def ParseInline(text: str) -> List[Inline]:
     return tokens
 
 
+# ============================================================
+# PARAGRAPH FACTORY
+# ============================================================
+def MakeParagraph(text: str) -> Paragraph:
+    """Funzione per creare un paragrafo da una stringa di testo.
+    Args:
+        text (str): Il testo da convertire in un paragrafo.
+    Returns:
+        Paragraph: Il paragrafo creato.
+    """
+    return Paragraph(children=ParseInline(text))
+
+
+# ============================================================
+# MARKDOWN PARSER
+# ============================================================
 def MarkdownParser(path: str) -> Document:
     """Funzione per analizzare un file Markdown e convertirlo in un documento LaTeX.
     Args:
@@ -188,8 +197,8 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
         if line.startswith("#"):
             level: int = len(line) - len(line.lstrip("#"))
-            heading_text: str = line.lstrip("#").strip()
-            blocks.append(Heading(level=level, children=[Text(text=heading_text)]))
+            HeadingText: str = line.lstrip("#").strip()
+            blocks.append(Heading(level=level, children=ParseInline(HeadingText)))
             i += 1
             continue
 
@@ -221,7 +230,11 @@ def MarkdownParser(path: str) -> Document:
                 QuoteLines.append(lines[i].strip()[1:].strip())
                 i += 1
 
-            blocks.append(Blockquote(children=[MakeParagraph("\n".join(QuoteLines))]))
+            blocks.append(
+                Blockquote(
+                    children=[Paragraph(children=ParseInline("\n".join(QuoteLines)))]
+                )
+            )
             continue
 
         # -------------------------
@@ -248,28 +261,6 @@ def MarkdownParser(path: str) -> Document:
                 i += 1
 
             blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
-            continue
-
-        # Liste non ordinate: - item
-        if line.startswith("- "):
-            ListBuffer.append(line[2:].strip())
-            i += 1
-
-            if i == len(lines) or not lines[i].strip().startswith("- "):
-                blocks.append(ListBlock(items=ListBuffer, ordered=ordered))
-                ListBuffer = []
-            continue
-
-        # Liste ordinate: 1. item
-        if re.match(r"\d+\.\s", line):
-            item: str = re.sub(r"^\d+\.\s", "", line).strip()
-            ListBuffer.append(item)
-            ordered = True
-            i += 1
-
-            if i == len(lines) or not re.match(r"\d+\.\s", lines[i].strip()):
-                blocks.append(ListBlock(items=ListBuffer, ordered=ordered))
-                ListBuffer = []
             continue
 
         # -------------------------
@@ -302,23 +293,12 @@ def MarkdownParser(path: str) -> Document:
             continue
 
         # -------------------------
-        # Formula block $$
-        # -------------------------
-
-        InlineFormula: List[str] = re.findall(r"\$(.+?)\$", line)
-        if InlineFormula:
-            for formula in InlineFormula:
-                blocks.append(Formula(latex=formula, display=False))
-            i += 1
-            continue
-
-        # -------------------------
         # Table
         # -------------------------
 
         if "|" in line and re.match(r"\|.*\|", line):
             HeaderCells: List[TableCell] = [
-                TableCell(children=[Text(c.strip())])
+                TableCell(children=ParseInline(c.strip()))
                 for c in line.strip("|").split("|")
             ]
             header = TableRow(cells=HeaderCells)
@@ -332,7 +312,7 @@ def MarkdownParser(path: str) -> Document:
             rows: List[TableRow] = []
             while i < len(lines) and "|" in lines[i]:
                 row_cells: List[TableCell] = [
-                    TableCell(children=[Text(c.strip())])
+                    TableCell(children=ParseInline(c.strip()))
                     for c in lines[i].strip().strip("|").split("|")
                 ]
                 rows.append(TableRow(cells=row_cells))
@@ -346,7 +326,7 @@ def MarkdownParser(path: str) -> Document:
         # -------------------------
 
         if line:
-            blocks.append(MakeParagraph(line))
+            blocks.append(Paragraph(children=ParseInline(line)))
         i += 1
 
     return Document(blocks=blocks)
