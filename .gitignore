@@ -38,6 +38,8 @@ output/
 *.pdf
 sample.txt
 sample.md
+*.png
+*.jpg
 
 # File generati da LaTeX
 *.aux
