@@ -12,6 +12,7 @@ from ..model.blocks import (
     Blockquote,
     HorizontalRule,
     HtmlBlock,
+    HtmlComment,
     Table,
     TableRow,
     TableCell,
@@ -224,6 +225,12 @@ def BlockToLatex(block: Block) -> str:
                 + rf"\end{{quote}}"
                 + "\n\n"
             )
+
+        # -------------------------
+        # HTML comment (ignored)
+        # -------------------------
+        case HtmlComment():
+            return ""
 
         # -------------------------
         # ListBlock

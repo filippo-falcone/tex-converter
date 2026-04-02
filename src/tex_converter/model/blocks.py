@@ -206,3 +206,10 @@ class HtmlBlock(Block):
     """Rappresenta un blocco HTML in un documento LaTeX."""
 
     html: str
+
+
+@dataclass
+class HtmlComment(Block):
+    """Rappresenta un commento HTML in un documento LaTeX."""
+
+    comment: str

@@ -14,6 +14,7 @@ from ..model.blocks import (
     Blockquote,
     HorizontalRule,
     HtmlBlock,
+    HtmlComment,
     Table,
     TableRow,
     TableCell,
@@ -295,6 +296,30 @@ def MarkdownParser(path: str) -> Document:
                 i += 1
 
             blocks.append(HtmlBlock(html="\n".join(HtmlLines)))
+            continue
+
+        # -------------------------
+        # HTML comment
+        # -------------------------
+        if line.strip().startswith("<!--"):
+            # Se il commento è single-line (contiene sia <!-- che -->), skippiamo
+            if "-->" in line:
+                i += 1
+                continue
+            
+            # Altrimenti è multi-line
+            CommentLines: List[str] = [line]
+            i += 1
+
+            while i < len(lines) and not lines[i].strip().endswith("-->"):
+                CommentLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            if i < len(lines):
+                CommentLines.append(lines[i].rstrip("\n"))
+                i += 1
+
+            blocks.append(HtmlComment(comment="\n".join(CommentLines)))
             continue
 
         # -------------------------
