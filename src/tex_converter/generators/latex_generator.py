@@ -31,6 +31,7 @@ from ..model.blocks import (
     Superscript,
     Subscript,
     Highlight,
+    Footnote,
     Inline,
 )
 from ..utils import EscapeLatex, EscapeLatexUrl
@@ -136,6 +137,12 @@ def InlineToLatex(inlines: List[Inline]) -> str:
             # -------------------------
             case Highlight(children=children):
                 out.append(r"\colorbox{yellow}{" + InlineToLatex(children) + "}")
+
+            # -------------------------
+            # Footnote
+            # -------------------------
+            case Footnote(content=content):
+                out.append(rf"\footnote{{{content}}}")
 
             # -------------------------
             # Default

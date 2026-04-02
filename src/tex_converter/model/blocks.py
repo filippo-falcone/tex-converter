@@ -118,6 +118,13 @@ class Highlight(Inline):
     children: List[Inline]
 
 
+@dataclass
+class Footnote(Inline):
+    """Rappresenta una nota a piè di pagina (footnote) in un documento LaTeX."""
+
+    content: str
+
+
 # =========================
 # Blocchi principali
 # =========================

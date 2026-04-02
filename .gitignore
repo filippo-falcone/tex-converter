@@ -41,6 +41,9 @@ sample.md
 *.png
 *.jpg
 
+# Parser legacy (da rimuovere dopo migrazione a moduli)
+src/tex_converter/parsers/markdown_parser.py
+
 # File generati da LaTeX
 *.aux
 *.log

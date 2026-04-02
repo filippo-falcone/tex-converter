@@ -1,6 +1,6 @@
 import os
 from .parsers.txt_parser import TxtParser
-from .parsers.markdown_parser import MarkdownParser
+from .parsers.markdown import MarkdownParser
 from .generators.latex_generator import LatexGenerator
 from .model.document import Document
 

@@ -1,8 +1,8 @@
 import re
 import chardet
 from typing import List
-from ..model.document import Document, Block
-from ..model.blocks import (
+from ...model.document import Document, Block
+from ...model.blocks import (
     Inline,
     Paragraph,
     Heading,
@@ -10,8 +10,6 @@ from ..model.blocks import (
     Formula,
     ListBlock,
     ListItem,
-    TaskList,
-    TaskItem,
     CodeBlock,
     Blockquote,
     HorizontalRule,
@@ -23,33 +21,25 @@ from ..model.blocks import (
     Text,
     Bold,
     Italic,
-    Strikethrough,
     CodeInline,
     Link,
     ImageInline,
     MathInline,
     HtmlInline,
     LineBreak,
-    Superscript,
-    Subscript,
-    Highlight,
-    Footnote,
 )
 
 
 # ============================================================
-# INLINE PARSER
+# INLINE PARSER - STANDARD MARKDOWN ONLY
 # ============================================================
-def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inline]:
+def ParseInline(text: str) -> List[Inline]:
     """Funzione per analizzare il testo inline e identificare eventuali formule o altri elementi inline.
     Args:
         text (str): Il testo da analizzare.
-        footnotes (dict): Dizionario opzionale delle definizioni di footnote.
     Returns:
         List[Inline]: Una lista di elementi inline identificati nel testo.
     """
-    if footnotes is None:
-        footnotes = {}
 
     tokens: List[Inline] = []
     i = 0
@@ -111,108 +101,14 @@ def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inli
             continue
 
         # -------------------------
-        # Footnote reference: [^id]
-        # -------------------------
-        footnote_match: re.Match[str] | None = re.match(
-            r"\[\^([a-zA-Z0-9_-]+)\]", text[i:]
-        )
-        if footnote_match:
-            footnote_id: str = footnote_match.group(1)
-            if footnote_id in footnotes:
-                tokens.append(Footnote(content=footnotes[footnote_id]))
-                i += footnote_match.end()
-                continue
-            # Se non trovato, trata come text normale
-            # (non emettere errore, solo skippa)
-
-        # -------------------------
         # Bold+italic: ***text***
         # -------------------------
         if text.startswith("***", i):
             end: int = text.find("***", i + 3)
             if end != -1:
-                inner: List[Inline] = ParseInline(text[i + 3 : end], footnotes)
+                inner: List[Inline] = ParseInline(text[i + 3 : end])
                 tokens.append(Bold(children=[Italic(children=inner)]))
                 i: int = end + 3
-                continue
-
-        # -------------------------
-        # Strikethrough: ~~text~~
-        # -------------------------
-        if text.startswith("~~", i):
-            end: int = text.find("~~", i + 2)
-            if end != -1:
-                inner: List[Inline] = ParseInline(text[i + 2 : end], footnotes)
-                tokens.append(Strikethrough(children=inner))
-                i: int = end + 2
-                continue
-
-        # -------------------------
-        # Highlight: ==text==
-        # -------------------------
-        if text.startswith("==", i):
-            end: int = text.find("==", i + 2)
-            if end != -1:
-                inner: List[Inline] = ParseInline(text[i + 2 : end], footnotes)
-                tokens.append(Highlight(children=inner))
-                i: int = end + 2
-                continue
-
-        # -------------------------
-        # HTML Highlight: <mark>content</mark>
-        # -------------------------
-        mark_match: re.Match[str] | None = re.match(r"<mark>(.*?)</mark>", text[i:])
-        if mark_match:
-            content: str = mark_match.group(1)
-            inner: List[Inline] = ParseInline(content, footnotes)
-            tokens.append(Highlight(children=inner))
-            i += mark_match.end()
-            continue
-
-        # -------------------------
-        # HTML Superscript: <sup>content</sup>
-        # -------------------------
-        sup_match: re.Match[str] | None = re.match(r"<sup>(.*?)</sup>", text[i:])
-        if sup_match:
-            content: str = sup_match.group(1)
-            inner: List[Inline] = ParseInline(content, footnotes)
-            tokens.append(Superscript(children=inner))
-            i += sup_match.end()
-            continue
-
-        # -------------------------
-        # HTML Subscript: <sub>content</sub>
-        # -------------------------
-        sub_match: re.Match[str] | None = re.match(r"<sub>(.*?)</sub>", text[i:])
-        if sub_match:
-            content: str = sub_match.group(1)
-            inner: List[Inline] = ParseInline(content, footnotes)
-            tokens.append(Subscript(children=inner))
-            i += sub_match.end()
-            continue
-
-        # -------------------------
-        # Pandoc Superscript: ^content^
-        # -------------------------
-        if text.startswith("^", i) and not text.startswith("^^", i):
-            end: int = text.find("^", i + 1)
-            if end != -1 and end > i + 1:
-                content: str = text[i + 1 : end]
-                inner: List[Inline] = ParseInline(content, footnotes)
-                tokens.append(Superscript(children=inner))
-                i: int = end + 1
-                continue
-
-        # -------------------------
-        # Pandoc Subscript: ~content~ (but not ~~strikethrough~~)
-        # -------------------------
-        if text[i] == "~" and not text.startswith("~~", i):
-            end: int = text.find("~", i + 1)
-            if end != -1 and end > i + 1 and not text.startswith("~~", end):
-                content: str = text[i + 1 : end]
-                inner: List[Inline] = ParseInline(content, footnotes)
-                tokens.append(Subscript(children=inner))
-                i: int = end + 1
                 continue
 
         # -------------------------
@@ -221,7 +117,7 @@ def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inli
         if text.startswith("__", i):
             end: int = text.find("__", i + 2)
             if end != -1:
-                inner: List[Inline] = ParseInline(text[i + 2 : end], footnotes)
+                inner: List[Inline] = ParseInline(text[i + 2 : end])
                 tokens.append(Bold(children=inner))
                 i: int = end + 2
                 continue
@@ -232,7 +128,7 @@ def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inli
         if text.startswith("**", i):
             end: int = text.find("**", i + 2)
             if end != -1:
-                inner: List[Inline] = ParseInline(text[i + 2 : end], footnotes)
+                inner: List[Inline] = ParseInline(text[i + 2 : end])
                 tokens.append(Bold(children=inner))
                 i: int = end + 2
                 continue
@@ -244,7 +140,7 @@ def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inli
             end: int = text.find("_", i + 1)
             if end != -1 and end > i + 1:
                 # Check: almeno 1 char dentro
-                inner: List[Inline] = ParseInline(text[i + 1 : end], footnotes)
+                inner: List[Inline] = ParseInline(text[i + 1 : end])
                 tokens.append(Italic(children=inner))
                 i: int = end + 1
                 continue
@@ -255,7 +151,7 @@ def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inli
         if text.startswith("*", i):
             end: int = text.find("*", i + 1)
             if end != -1 and end > i + 1:
-                inner: List[Inline] = ParseInline(text[i + 1 : end], footnotes)
+                inner: List[Inline] = ParseInline(text[i + 1 : end])
                 tokens.append(Italic(children=inner))
                 i: int = end + 1
                 continue
@@ -283,24 +179,21 @@ def ParseInline(text: str, footnotes: dict[str, str] | None = None) -> List[Inli
 # ============================================================
 # PARAGRAPH FACTORY
 # ============================================================
-def MakeParagraph(text: str, footnotes: dict[str, str] | None = None) -> Paragraph:
+def MakeParagraph(text: str) -> Paragraph:
     """Funzione per creare un paragrafo da una stringa di testo.
     Args:
         text (str): Il testo da convertire in un paragrafo.
-        footnotes (dict): Dizionario opzionale delle definizioni di footnote.
     Returns:
         Paragraph: Il paragrafo creato.
     """
-    if footnotes is None:
-        footnotes = {}
-    return Paragraph(children=ParseInline(text, footnotes))
+    return Paragraph(children=ParseInline(text))
 
 
 # ============================================================
-# MARKDOWN PARSER
+# MARKDOWN PARSER - STANDARD MARKDOWN ONLY
 # ============================================================
 def MarkdownParser(path: str) -> Document:
-    """Funzione per analizzare un file Markdown e convertirlo in un documento LaTeX.
+    """Funzione per analizzare un file Markdown (standard vanilla) e convertirlo in un documento LaTeX.
     Args:
         path (str): Il percorso del file Markdown da analizzare.
     Returns:
@@ -310,34 +203,15 @@ def MarkdownParser(path: str) -> Document:
     with open(path, "rb") as f:
         raw: bytes = f.read()
         detected: chardet.DetectionDict = chardet.detect(raw)
-        encoding: str = (
-            detected.get("encoding") or "utf-8"
-        )  # Fallback a UTF-8 se non viene rilevata l'encoding
-        if encoding.lower() in (
-            "utf-8",
-            "utf-8-sig",
-        ):  # Se l'encoding è UTF-8, usiamo 'utf-8-sig' per gestire eventuali BOM
+        encoding: str = detected.get("encoding") or "utf-8"
+        if encoding.lower() in ("utf-8", "utf-8-sig"):
             encoding = "utf-8-sig"
 
     with open(path, "r", encoding=encoding) as f:
         lines: List[str] = f.readlines()
 
-    # ===================== FIRST PASS: Collect footnote definitions =====================
-    footnotes: dict[str, str] = {}
-    for raw_line in lines:
-        line: str = raw_line.strip()
-        # Match: [^id]: content
-        footnote_def_match: re.Match[str] | None = re.match(
-            r"\[\^([a-zA-Z0-9_-]+)\]:\s*(.*)", line
-        )
-        if footnote_def_match:
-            footnote_id: str = footnote_def_match.group(1)
-            footnote_content: str = footnote_def_match.group(2).strip()
-            footnotes[footnote_id] = footnote_content
-
     blocks: List[Block] = []
     ListBuffer: List[ListItem] = []
-    TaskBuffer: List[TaskItem] = []
     i: int = 0
 
     while i < len(lines):
@@ -353,9 +227,7 @@ def MarkdownParser(path: str) -> Document:
         if line.startswith("#"):
             level: int = len(line) - len(line.lstrip("#"))
             HeadingText: str = line.lstrip("#").strip()
-            blocks.append(
-                Heading(level=level, children=ParseInline(HeadingText, footnotes))
-            )
+            blocks.append(Heading(level=level, children=ParseInline(HeadingText)))
             i += 1
             continue
 
@@ -389,11 +261,7 @@ def MarkdownParser(path: str) -> Document:
 
             blocks.append(
                 Blockquote(
-                    children=[
-                        Paragraph(
-                            children=ParseInline("\n".join(QuoteLines), footnotes)
-                        )
-                    ]
+                    children=[Paragraph(children=ParseInline("\n".join(QuoteLines)))]
                 )
             )
             continue
@@ -449,38 +317,12 @@ def MarkdownParser(path: str) -> Document:
             continue
 
         # -------------------------
-        # Task list: - [ ] item or - [x] item
-        # -------------------------
-        if re.match(r"- \[([ xX])\]", line):
-            match = re.match(r"- \[([ xX])\]\s*(.*)", line)
-            if match:
-                checked = match.group(1).lower() == "x"
-                task_text = match.group(2).strip()
-                TaskBuffer.append(
-                    TaskItem(
-                        checked=checked,
-                        children=[
-                            Paragraph(children=ParseInline(task_text, footnotes))
-                        ],
-                    )
-                )
-                i += 1
-
-                # Fine task list
-                if i == len(lines) or not re.match(r"- \[([ xX])\]", lines[i].strip()):
-                    blocks.append(TaskList(items=TaskBuffer))
-                    TaskBuffer = []
-                continue
-
-        # -------------------------
         # Unordered list: - item
         # -------------------------
         if line.startswith("- "):
             ItemText: str = line[2:].strip()
             ListBuffer.append(
-                ListItem(
-                    children=[Paragraph(children=ParseInline(ItemText, footnotes))]
-                )
+                ListItem(children=[Paragraph(children=ParseInline(ItemText))])
             )
             i += 1
 
@@ -496,9 +338,7 @@ def MarkdownParser(path: str) -> Document:
         if re.match(r"\d+\.\s", line):
             ItemText: str = re.sub(r"^\d+\.\s", "", line).strip()
             ListBuffer.append(
-                ListItem(
-                    children=[Paragraph(children=ParseInline(ItemText, footnotes))]
-                )
+                ListItem(children=[Paragraph(children=ParseInline(ItemText))])
             )
             i += 1
 
@@ -554,7 +394,7 @@ def MarkdownParser(path: str) -> Document:
 
         if "|" in line and re.match(r"\|.*\|", line):
             HeaderCells: List[TableCell] = [
-                TableCell(children=ParseInline(c.strip(), footnotes))
+                TableCell(children=ParseInline(c.strip()))
                 for c in line.strip("|").split("|")
             ]
             header = TableRow(cells=HeaderCells)
@@ -568,7 +408,7 @@ def MarkdownParser(path: str) -> Document:
             rows: List[TableRow] = []
             while i < len(lines) and "|" in lines[i]:
                 row_cells: List[TableCell] = [
-                    TableCell(children=ParseInline(c.strip(), footnotes))
+                    TableCell(children=ParseInline(c.strip()))
                     for c in lines[i].strip().strip("|").split("|")
                 ]
                 rows.append(TableRow(cells=row_cells))
@@ -606,12 +446,10 @@ def MarkdownParser(path: str) -> Document:
                         i += 1
                         break
 
-                blocks.append(
-                    Paragraph(children=ParseInline(paragraph_text, footnotes))
-                )
+                blocks.append(Paragraph(children=ParseInline(paragraph_text)))
             else:
                 # Paragrafo semplice senza line break
-                blocks.append(Paragraph(children=ParseInline(line, footnotes)))
+                blocks.append(Paragraph(children=ParseInline(line)))
                 i += 1
         else:
             i += 1
