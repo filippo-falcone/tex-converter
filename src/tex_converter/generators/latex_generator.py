@@ -1,80 +1,331 @@
-from typing import List, Literal
+from typing import List, Literal, LiteralString
 from ..model.document import Document
-from ..model.blocks import Paragraph, Heading, Image, Formula, ListBlock, Table
+from ..model.blocks import (
+    Block,
+    Paragraph,
+    Heading,
+    Image,
+    Formula,
+    ListBlock,
+    ListItem,
+    CodeBlock,
+    Blockquote,
+    HorizontalRule,
+    HtmlBlock,
+    Table,
+    TableRow,
+    TableCell,
+    Text,
+    Bold,
+    Italic,
+    CodeInline,
+    Link,
+    ImageInline,
+    MathInline,
+    HtmlInline,
+    Inline,
+)
+from ..utils import EscapeLatex, EscapeLatexUrl
 
 
+# ============================================================
+# INLINE → LATEX
+# ============================================================
+def InlineToLatex(inlines: List[Inline]) -> str:
+    """Funzione ricorsiva che converte una lista di elementi inline in una stringa LaTeX. Gestisce diversi tipi di inline come testo, grassetto, corsivo, link e formule matematiche.
+    Args:
+        inlines (List[Inline]): La lista di elementi inline da convertire.
+    Returns:
+        str: La rappresentazione in LaTeX degli elementi inline.
+    Raises:
+        ValueError: Se viene fornito un tipo di inline non supportato."""
+    out = []
+
+    for token in inlines:
+        match token:
+
+            # -------------------------
+            # Text - ESCAPARE CARATTERI SPECIALI
+            # -------------------------
+            case Text(text=t):
+                out.append(EscapeLatex(t))
+
+            # -------------------------
+            # Bold
+            # -------------------------
+            case Bold(children=children):
+                out.append(r"\textbf{" + InlineToLatex(children) + "}")
+
+            # -------------------------
+            # Italic
+            # -------------------------
+            case Italic(children=children):
+                out.append(r"\textit{" + InlineToLatex(children) + "}")
+
+            # -------------------------
+            # Code inline - ESCAPARE CONSERVATIVAMENTE
+            # -------------------------
+            case CodeInline(code=c):
+                escaped_code: str = c.replace("\\", r"\textbackslash{}")
+                escaped_code = escaped_code.replace("{", r"\{")
+                escaped_code = escaped_code.replace("}", r"\}")
+                out.append(r"\texttt{" + escaped_code + "}")
+
+            # -------------------------
+            # Link
+            # -------------------------
+            case Link(children=children, url=url):
+                label: str = InlineToLatex(children)
+                escaped_url = EscapeLatexUrl(url)
+                out.append(rf"\href{{{escaped_url}}}{{{label}}}")
+
+            # -------------------------
+            # Image inline
+            # -------------------------
+            case ImageInline(src=src, alt=alt):
+                escaped_src: str = src.replace("_", r"\_") if "_" in src else src
+                out.append(rf"\includegraphics[height=1em]{{{escaped_src}}}")
+
+            # -------------------------
+            # Math inline
+            # -------------------------
+            case MathInline(expr=e):
+                out.append(f"${e}$")
+
+            # -------------------------
+            # HTML inline (ignored)
+            # -------------------------
+            case HtmlInline():
+                out.append("")
+
+            # -------------------------
+            # Default
+            # -------------------------
+            case _:
+                raise ValueError(f"Inline non gestito: {type(token)}")
+
+    return "".join(out)
+
+
+# ============================================================
+# BLOCK → LATEX
+# ============================================================
+def BlockToLatex(block: Block) -> str:
+    """Funzione ricorsiva che converte un blocco in LaTeX. Gestisce diversi tipi di blocchi come paragrafi, intestazioni, immagini, formule, liste e tabelle.
+    Args:
+        block (Block): Il blocco da convertire in LaTeX.
+    Returns:
+        str: La rappresentazione in LaTeX del blocco.
+    Raises:
+        ValueError: Se viene fornito un tipo di blocco non supportato.
+    """
+    match block:
+
+        # -------------------------
+        # Paragraph - TRIMMARE SPAZI
+        # -------------------------
+        case Paragraph():
+            content = InlineToLatex(block.children).strip()
+            if content:
+                return content + "\n\n"
+            return ""
+
+        # -------------------------
+        # Heading
+        # -------------------------
+        case Heading():
+            content: str = InlineToLatex(block.children)
+            match block.level:
+                case 1:
+                    return rf"\section*{{{content}}}" + "\n\n"
+                case 2:
+                    return rf"\subsection*{{{content}}}" + "\n\n"
+                case 3:
+                    return rf"\subsubsection*{{{content}}}" + "\n\n"
+                case _:
+                    return rf"\paragraph*{{{content}}}" + "\n\n"
+
+        # -------------------------
+        # Image block
+        # -------------------------
+        case Image():
+            latex: List[str] = [
+                r"\begin{figure}[ht]",
+                r"\centering",
+                rf"\includegraphics[width=\linewidth]{{{block.path}}}",
+            ]
+            if block.caption:
+                latex.append(rf"\caption{{{EscapeLatex(block.caption)}}}")
+            latex.append(r"\end{figure}")
+            return "\n".join(latex) + "\n\n"
+
+        # -------------------------
+        # Formula
+        # -------------------------
+        case Formula():
+            if block.display:
+                return rf"\[" + "\n" + block.latex + "\n" + r"\]" + "\n\n"
+            else:
+                return rf"${block.latex}$\n"
+
+        # -------------------------
+        # Code block
+        # -------------------------
+        case CodeBlock():
+            return (
+                rf"\begin{{verbatim}}"
+                + "\n"
+                + block.code
+                + "\n"
+                + rf"\end{{verbatim}}"
+                + "\n\n"
+            )
+
+        # -------------------------
+        # Blockquote
+        # -------------------------
+        case Blockquote():
+            inner_lines = []
+            for b in block.children:
+                inner = BlockToLatex(b).strip()
+                if inner:
+                    inner_lines.append(inner)
+            inner: str = "\n".join(inner_lines)
+            return (
+                rf"\begin{{quote}}" + "\n" + inner + "\n" + rf"\end{{quote}}" + "\n\n"
+            )
+
+        # -------------------------
+        # Horizontal rule
+        # -------------------------
+        case HorizontalRule():
+            return r"\noindent\rule{\textwidth}{0.5pt}" + "\n\n"
+
+        # -------------------------
+        # HTML block
+        # -------------------------
+        case HtmlBlock():
+            return "% HTML block ignored\n"
+
+        # -------------------------
+        # ListBlock
+        # -------------------------
+        case ListBlock():
+            env: Literal["enumerate"] | Literal["itemize"] = (
+                "enumerate" if block.ordered else "itemize"
+            )
+            out: List[str] = [rf"\begin{{{env}}}"]
+            for item in block.items:
+                item_lines = []
+                for b in item.children:
+                    item_content: str = BlockToLatex(b).strip()
+                    if item_content:
+                        item_lines.append(item_content)
+                if item_lines:
+                    out.append(rf"\item {' '.join(item_lines)}")
+            out.append(rf"\end{{{env}}}")
+            return "\n".join(out) + "\n\n"
+
+        # -------------------------
+        # Table
+        # -------------------------
+        case Table():
+            if block.header is None:
+                if len(block.rows) == 0:
+                    return ""  # Tabella vuota
+                HeaderRow: TableRow = block.rows[0]
+                DataRows: List[TableRow] = block.rows[1:]
+            else:
+                HeaderRow: TableRow = block.header
+                DataRows: List[TableRow] = block.rows
+
+            ncols: int = len(HeaderRow.cells)
+            colspec: str = " | ".join(["l"] * ncols)
+
+            out = [rf"\begin{{tabular}}{{{colspec}}}", r"\hline"]
+
+            # Header
+            HeaderCells: List[str] = [
+                InlineToLatex(cell.children).strip() for cell in HeaderRow.cells
+            ]
+            out.append(" & ".join(HeaderCells) + r" \\")
+            out.append(r"\hline")
+
+            # Rows
+            for row in DataRows:
+                RowCells: List[str] = [
+                    InlineToLatex(cell.children).strip() for cell in row.cells
+                ]
+                out.append(" & ".join(RowCells) + r" \\")
+
+            out.append(r"\hline")
+            out.append(r"\end{tabular}")
+
+            return "\n".join(out) + "\n\n"
+
+        # -------------------------
+        # Default
+        # -------------------------
+        case _:
+            raise ValueError(f"Tipo di blocco non gestito: {type(block)}")
+
+
+# ============================================================
+# DOCUMENT → LATEX
+# ============================================================
 def LatexGenerator(document: Document) -> str:
-    """Genera il codice LaTeX a partire da un documento rappresentato come istanza di Document.
+    """Funzione che converte un documento in una stringa LaTeX completa.
+    Include l'intestazione del documento, la conversione di tutti i blocchi e la chiusura.
+
     Args:
         document (Document): Il documento da convertire in LaTeX.
+
     Returns:
-        str: Il codice LaTeX generato.
+        str: La rappresentazione in LaTeX del documento.
     """
-    lines: List[str] = []
+    lines = []
 
-    # Intestazione base LaTeX
+    # ===================== PREAMBLE ESTESO =====================
+    lines.append(r"\documentclass[11pt,a4paper]{article}")
+    lines.append(r"\usepackage[utf-8]{inputenc}")
+    lines.append(r"\usepackage[italian]{babel}")
+    lines.append(r"\usepackage[T1]{fontenc}")
+    lines.append(r"\usepackage{graphicx}")
+    lines.append(r"\usepackage{amsmath}")
+    lines.append(r"\usepackage{amssymb}")
+    lines.append(r"\usepackage{hyperref}")
+    lines.append(r"\usepackage{xcolor}")
+    lines.append(r"\usepackage{listings}")
+    lines.append(r"\usepackage{microtype}")
+    lines.append(r"\usepackage[margin=1in]{geometry}")
+    lines.append(r"")
 
-    lines.append("\\documentclass{article}")
-    lines.append("\\usepackage{graphicx}")
-    lines.append("\\usepackage{amsmath}")
-    lines.append("\\begin{document}")
-    lines.append("")
+    lines.append(r"\lstset{")
+    lines.append(r"  basicstyle=\ttfamily\small,")
+    lines.append(r"  breaklines=true,")
+    lines.append(r"  frame=shadowbox,")
+    lines.append(r"  backgroundcolor=\color{lightgray!20},")
+    lines.append(r"}")
+    lines.append(r"")
 
+    lines.append(r"\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}")
+    lines.append(r"\begin{document}")
+    lines.append(r"")
+
+    # ===================== CONTENUTO =====================
     for block in document.blocks:
-        match block:
-            case Paragraph(text=t):
-                lines.append(t)
-                lines.append("")
+        latex_block: str = BlockToLatex(block)
+        if latex_block.strip():  # Solo se non vuoto
+            lines.append(latex_block)
 
-            case Heading(level=l, text=t):
-                if l == 1:
-                    lines.append(f"\\section{{{t}}}")
-                elif l == 2:
-                    lines.append(f"\\subsection{{{t}}}")
-                else:
-                    lines.append(f"\\subsubsection{{{t}}}")
-                lines.append("")
+    # ===================== FINE DOCUMENTO =====================
+    lines.append(r"\end{document}")
 
-            case Image(path=p, caption=c):
-                lines.append("\\begin{figure}[ht]")
-                lines.append("\\centering")
-                lines.append(f"\\includegraphics[width=\\linewidth]{{{p}}}")
-                if c:
-                    lines.append(f"\\caption{{{c}}}")
-                lines.append("\\end{figure}")
-                lines.append("")
+    # Pulire righe vuote multiple consecutive
+    result: LiteralString = "\n".join(lines)
 
-            case Formula(latex=fx, display=d):
-                if d:
-                    lines.append(f"\\[ {fx} \\]")
-                else:
-                    lines.append(f"${fx}$")
-                lines.append("")
+    # Compattare righe vuote multiple
+    while "\n\n\n" in result:
+        result = result.replace("\n\n\n", "\n\n")
 
-            case ListBlock(items=items, ordered=ord):
-                env: Literal["enumerate"] | Literal["itemize"] = (
-                    "enumerate" if ord else "itemize"
-                )
-                lines.append(f"\\begin{{{env}}}")
-                for item in items:
-                    lines.append(f"  \\item {item}")
-                lines.append(f"\\end{{{env}}}")
-                lines.append("")
-
-            case Table(headers=h, rows=r):
-                col_spec: str = " | ".join(["l"] * len(h))
-                lines.append("\\begin{tabular}{" + col_spec + "}")
-                lines.append(" \\hline")
-                lines.append(" & ".join(h) + " \\\\")
-                lines.append(" \\hline")
-                for row in r:
-                    lines.append(" & ".join(row) + " \\\\")
-                lines.append(" \\hline")
-                lines.append("\\end{tabular}")
-                lines.append("")
-
-            case _:
-                raise ValueError(f"Tipo di blocco non gestito: {type(block)}")
-
-    lines.append("\\end{document}")
-    return "\n".join(lines)
+    return result
