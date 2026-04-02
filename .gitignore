@@ -81,3 +81,12 @@ htmlcov/
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# PyInstaller (GUI executable)
+*.exe
+*.spec
+gui/dist/
+gui/build/
+
+# Deprecated/Reference files
+src/tex_converter/parsers/markdown_parser.py
